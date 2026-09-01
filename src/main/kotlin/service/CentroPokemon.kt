@@ -34,7 +34,7 @@ class CentroPokemon {
 
     fun buscarCamillaLibre(): CamillaModel? {
         return camillas.firstOrNull {
-            it.estado == EstadoCamilla.LIBRE
+            it.estado is EstadoCamilla.Libre
         }
     }
 
@@ -50,15 +50,12 @@ class CentroPokemon {
             return
         }
 
-        camilla.estado = EstadoCamilla.EN_PROCESO
-        camilla.motivo = "Ingresando Pokemon..."
+        camilla.estado = EstadoCamilla.EnProceso(motivo = "Ingresando Pokemon...")
         println("Camilla ${camilla.numero} - Ingresando ${pokemon.nombrePokemon}...")
 
         delay(3000)
 
-        camilla.estado = EstadoCamilla.OCUPADA
-        camilla.pokemon = pokemon
-        camilla.motivo = ""
+        camilla.estado = EstadoCamilla.Ocupada(pokemon = pokemon)
         historial.add(pokemon)
 
         println("${pokemon.nombrePokemon} ingresando en camilla ${camilla.numero}")
@@ -70,16 +67,19 @@ class CentroPokemon {
             return
         }
 
-        val camilla = camillas.find {it.pokemon?.idPokedex == codigo}
-        if (camilla == null || camilla.pokemon == null) {
+        val camilla = camillas.find { estado ->
+            estado.estado is EstadoCamilla.Ocupada &&
+            (estado.estado as EstadoCamilla.Ocupada).pokemon.idPokedex == codigo
+        }
+
+        if (camilla == null || camilla.estado !is EstadoCamilla.Ocupada) {
             println("Error: pokemon no encontrado - $codigo")
             return
         }
 
-        val pokemon = camilla.pokemon!!
+        val pokemon = (camilla.estado as EstadoCamilla.Ocupada).pokemon
 
-        camilla.estado = EstadoCamilla.EN_PROCESO
-        camilla.motivo = "Procesando alta y cobro..."
+        camilla.estado = EstadoCamilla.EnProceso(motivo = "Procesando alta y cobro...")
         println("Camilla ${camilla.numero} - Procesando alta de ${pokemon.nombrePokemon}...")
 
         delay(6500)
@@ -91,9 +91,7 @@ class CentroPokemon {
         recaudacionTotal += total
         recaudacionPorCategoria[pokemon.tipoPokemon] = (recaudacionPorCategoria[pokemon.tipoPokemon] ?: 0.0) + total
 
-        camilla.estado = EstadoCamilla.LIBRE
-        camilla.pokemon = null
-        camilla.motivo = ""
+        camilla.estado = EstadoCamilla.Libre
 
         println("""
             === FICHA DE ALTA ===
@@ -108,8 +106,8 @@ class CentroPokemon {
     }
 
     fun contarCamillasDisponibles(): Int {
-        return camillas.count{
-            it.estado == EstadoCamilla.LIBRE
+        return camillas.count {
+            it.estado is EstadoCamilla.Libre
         }
     }
 

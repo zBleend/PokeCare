@@ -1,10 +1,10 @@
 package cl.ejercicio.model
 
-enum class EstadoCamilla (val descripcion: String){
+sealed class EstadoCamilla {
 
-    LIBRE("La camilla está disponible"),
-    OCUPADA("La camilla tiene un Pokemon asignado"),
-    EN_PROCESO ("Etapa de escaneo o sanacion"),
-    FUERA_SERVICIO ("La camilla está inhabilitada o desinfectandose")
+    object Libre : EstadoCamilla()
+    data class Ocupada(val pokemon: PokemonModel) : EstadoCamilla()
+    data class EnProceso(val motivo: String) : EstadoCamilla()
+    data class FueraDeServicio(val motivo: String) : EstadoCamilla()
 
 }

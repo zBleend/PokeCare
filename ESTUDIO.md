@@ -323,7 +323,7 @@ val (nombre, tipo, nivel) = pikachu   // Destructuring
 
 ### 5.5 Sealed Classes
 
-Para jerarquías de clases restringidas:
+Para jerarquías de clases restringidas donde cada variante puede tener **datos diferentes**:
 
 ```kotlin
 sealed class Resultado
@@ -338,6 +338,40 @@ fun procesar(resultado: Resultado) {
     }
 }
 ```
+
+**¿Cuándo usar sealed class vs enum?**
+
+| Característica | Enum | Sealed Class |
+|----------------|------|--------------|
+| Datos diferentes por variante | No | Sí |
+| Solo valores fijos | Sí | No |
+| Cada variante tiene propiedades distintas | No | Sí |
+| Ejemplo simple | TipoPokemon | EstadoCamilla |
+
+**Ejemplo práctico - EstadoCamilla:**
+```kotlin
+sealed class EstadoCamilla {
+    object Libre : EstadoCamilla()
+    data class Ocupada(val pokemon: PokemonModel) : EstadoCamilla()
+    data class EnProceso(val motivo: String) : EstadoCamilla()
+    data class FueraDeServicio(val motivo: String) : EstadoCamilla()
+}
+
+// Uso con when
+fun descripcion(estado: EstadoCamilla): String {
+    return when (estado) {
+        is EstadoCamilla.Libre -> "Disponible"
+        is EstadoCamilla.Ocupada -> "Ocupada por ${estado.pokemon.nombrePokemon}"
+        is EstadoCamilla.EnProceso -> estado.motivo
+        is EstadoCamilla.FueraDeServicio -> "Fuera de servicio: ${estado.motivo}"
+    }
+}
+```
+
+**Ventajas de sealed class:**
+- Kotlin te obliga a cubrir todos los casos en `when`
+- Cada variante solo lleva los datos que necesita
+- Es type-safe: no puedes tener un estado inválido
 
 ---
 

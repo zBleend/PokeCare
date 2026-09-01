@@ -44,7 +44,7 @@ PokeCare/
 │           │   ├── PokemonDragon.kt    # Subclase Dragón
 │           │   ├── TipoPokemon.kt      # Enum de categorías
 │           │   ├── TipoEntrenador.kt   # Enum de entrenadores
-│           │   ├── EstadoCamilla.kt    # Enum de estados
+│           │   ├── EstadoCamilla.kt    # Sealed class de estados
 │           │   └── CamillaModel.kt     # Modelo de camilla
 │           └── service/                # Lógica de negocio
 │               └── CentroPokemon.kt    # Gestor principal
@@ -363,21 +363,43 @@ enum class TipoEntrenador {
 }
 ```
 
-#### 5.3 - Crear EstadoCamilla.kt
+#### 5.3 - Crear EstadoCamilla.kt (Sealed Class)
 
 1. Click derecho en `model` → **New → Kotlin Class/File**
 2. Escribir: `EstadoCamilla`
-3. Seleccionar **Enum Class**
+3. Seleccionar **Class** (no Enum Class)
 4. Reemplazar contenido:
 
 ```kotlin
 package cl.ejercicio.model
 
-enum class EstadoCamilla(val descripcion: String) {
-    LIBRE("La camilla está disponible"),
-    OCUPADA("La camilla tiene un Pokémon asignado"),
-    EN_PROCESO("Etapa de escaneo o sanación"),
-    FUERA_DE_SERVICIO("Inhabilitada o desinfectándose")
+sealed class EstadoCamilla {
+    object Libre : EstadoCamilla()
+    data class Ocupada(val pokemon: PokemonModel) : EstadoCamilla()
+    data class EnProceso(val motivo: String) : EstadoCamilla()
+    data class FueraDeServicio(val motivo: String) : EstadoCamilla()
+}
+```
+
+**¿Por qué sealed class y no enum?**
+
+Cada estado de la camilla tiene **datos diferentes**:
+- `Libre`: no necesita datos adicionales
+- `Ocupada`: necesita saber qué Pokémon está en la camilla
+- `EnProceso`: necesita un motivo ("Sanando...", "Ingresando...")
+- `FueraDeServicio`: necesita un motivo (ej: "Desinfectando")
+
+Un enum no puede tener propiedades diferentes para cada variante. Una sealed class sí.
+
+**Uso con `when`:**
+```kotlin
+fun describirEstado(estado: EstadoCamilla): String {
+    return when (estado) {
+        is EstadoCamilla.Libre -> "Disponible"
+        is EstadoCamilla.Ocupada -> "Ocupada por ${estado.pokemon.nombrePokemon}"
+        is EstadoCamilla.EnProceso -> estado.motivo
+        is EstadoCamilla.FueraDeServicio -> "Fuera de servicio: ${estado.motivo}"
+    }
 }
 ```
 
@@ -513,11 +535,35 @@ package cl.ejercicio.model
 
 class CamillaModel(
     val numero: Int,
-    var estado: EstadoCamilla = EstadoCamilla.LIBRE,
-    var pokemon: PokemonModel? = null,
-    var motivo: String = ""
+    var estado: EstadoCamilla = EstadoCamilla.Libre
 )
 ```
+
+**Explicación:**
+- `var estado`: Mutable (puede cambiar entre estados)
+- `= EstadoCamilla.Libre`: Valor por defecto al crear la camilla
+- No necesitamos campos separados para `pokemon` o `motivo` porque están **dentro** de la sealed class
+
+**Antes (con enum):**
+```kotlin
+class CamillaModel(
+    val numero: Int,
+    var estado: EstadoCamilla = EstadoCamilla.LIBRE,
+    var pokemon: PokemonModel? = null,  // Campo separado
+    var motivo: String = ""             // Campo separado
+)
+```
+
+**Ahora (con sealed class):**
+```kotlin
+class CamillaModel(
+    val numero: Int,
+    var estado: EstadoCamilla = EstadoCamilla.Libre
+    // Pokemon y motivo están DENTRO de cada variante de EstadoCamilla
+)
+```
+
+**Ventaja:** Los datos están donde deben estar. Si la camilla está libre, no tiene pokemon ni motivo. Si está ocupada, tiene pokemon. Si está en proceso, tiene motivo.
 
 #### 5.9 - Crear CentroPokemon.kt
 
@@ -743,40 +789,55 @@ enum class TipoEntrenador {
 }
 ```
 
-### Enum: EstadoCamilla con Propiedades
+### Sealed Class: EstadoCamilla
 
 Crear archivo `model/EstadoCamilla.kt`:
 
 ```kotlin
 package cl.ejercicio.model
 
-enum class EstadoCamilla(val descripcion: String) {
-    LIBRE("La camilla está disponible"),
-    OCUPADA("La camilla tiene un Pokémon asignado"),
-    EN_PROCESO("Etapa de escaneo o sanación"),
-    FUERA_DE_SERVICIO("Inhabilitada o desinfectándose")
+sealed class EstadoCamilla {
+    object Libre : EstadoCamilla()
+    data class Ocupada(val pokemon: PokemonModel) : EstadoCamilla()
+    data class EnProceso(val motivo: String) : EstadoCamilla()
+    data class FueraDeServicio(val motivo: String) : EstadoCamilla()
 }
 ```
 
-**Explicación:**
-- `(val descripcion: String)`: Cada valor tiene una propiedad附加
-- Se accede con `EstadoCamilla.LIBRE.descripcion`
+**¿Por qué sealed class y no enum?**
+
+Cada estado tiene **datos diferentes**:
+- `Libre`: no necesita datos adicionales (es un objeto único)
+- `Ocupada`: necesita saber qué Pokémon está en la camilla
+- `EnProceso`: necesita un motivo ("Sanando...", "Ingresando...")
+- `FueraDeServicio`: necesita un motivo
+
+Un enum no puede tener propiedades diferentes para cada variante.
+
+**Uso con `when`:**
+```kotlin
+fun describirEstado(estado: EstadoCamilla): String {
+    return when (estado) {
+        is EstadoCamilla.Libre -> "Disponible"
+        is EstadoCamilla.Ocupada -> "Ocupada por ${estado.pokemon.nombrePokemon}"
+        is EstadoCamilla.EnProceso -> estado.motivo
+        is EstadoCamilla.FueraDeServicio -> "Fuera de servicio: ${estado.motivo}"
+    }
+}
+```
 
 **Comparación con Java:**
 ```java
-// Java - requiere campo, constructor y getter
-public enum EstadoCamilla {
-    LIBRE("La camilla está disponible"),
-    OCUPADA("La camilla tiene un Pokémon asignado");
-
-    private final String descripcion;
-
-    EstadoCamilla(String descripcion) {
-        this.descripcion = descripcion;
+// Java - usaría una jerarquía de clases abstractas
+public abstract class EstadoCamilla {
+    public static class Libre extends EstadoCamilla {}
+    public static class Ocupada extends EstadoCamilla {
+        private final Pokemon pokemon;
+        public Ocupada(Pokemon pokemon) { this.pokemon = pokemon; }
     }
-
-    public String getDescripcion() {
-        return descripcion;
+    public static class EnProceso extends EstadoCamilla {
+        private final String motivo;
+        public EnProceso(String motivo) { this.motivo = motivo; }
     }
 }
 ```
@@ -960,28 +1021,36 @@ package cl.ejercicio.model
 
 class CamillaModel(
     val numero: Int,
-    var estado: EstadoCamilla = EstadoCamilla.LIBRE,
-    var pokemon: PokemonModel? = null,
-    var motivo: String = ""
+    var estado: EstadoCamilla = EstadoCamilla.Libre
 )
 ```
 
 **Explicación:**
-- `var estado`: Mutable (puede cambiar)
-- `= EstadoCamilla.LIBRE`: Valor por defecto
-- `PokemonModel?`: Tipo nullable (puede ser null)
-- El `?` es importante: en Kotlin los tipos no pueden ser null a menos que lo declares con `?`
+- `var estado`: Mutable (puede cambiar entre estados)
+- `= EstadoCamilla.Libre`: Valor por defecto al crear la camilla
+- No necesitamos campos separados para `pokemon` o `motivo` porque están **dentro** de la sealed class
 
-**Null Safety en Kotlin:**
+**¿Por qué no hay campo `pokemon` o `motivo`?**
+
+Con la sealed class, los datos están donde deben estar:
 ```kotlin
-var pokemon: PokemonModel? = null   // Puede ser null
-var nombre: String = "Pikachu"      // NO puede ser null
+// Si está libre → no tiene datos extra
+camilla.estado = EstadoCamilla.Libre
 
-// Para acceder a un nullable, usa ?.
-println(pokemon?.nombrePokemon)     // Imprime null si es null
+// Si está ocupada → tiene el Pokémon DENTRO del estado
+camilla.estado = EstadoCamilla.Ocupada(pokemon = pikachu)
 
-// Para forzar (cuidado, lanza excepción si es null)
-println(pokemon!!.nombrePokemon)    // Lanza error si es null
+// Si está en proceso → tiene el motivo DENTRO del estado
+camilla.estado = EstadoCamilla.EnProceso(motivo = "Sanando...")
+
+// Acceder al Pokémon (usando smart cast)
+when (camilla.estado) {
+    is EstadoCamilla.Ocupada -> {
+        val pokemon = (camilla.estado as EstadoCamilla.Ocupada).pokemon
+        println("Camilla ${camilla.numero} tiene a ${pokemon.nombrePokemon}")
+    }
+    // ... otros casos
+}
 ```
 
 ---
@@ -1057,7 +1126,7 @@ fun validarCodigo(codigo: String): Boolean {
 ```kotlin
 fun buscarCamillaLibre(): CamillaModel? {
     return camillas.firstOrNull {
-        it.estado == EstadoCamilla.LIBRE
+        it.estado is EstadoCamilla.Libre
     }
 }
 ```
@@ -1065,13 +1134,13 @@ fun buscarCamillaLibre(): CamillaModel? {
 **Explicación:**
 - `firstOrNull`: Retorna el primer elemento que cumple la condición, o null si no hay ninguno
 - `it`: Se refiere a cada elemento de la lista (como `x` en un for)
-- Lambda: `{ it.estado == EstadoCamilla.LIBRE }` es como una función anónima
+- `is EstadoCamilla.Libre`: Verifica si el estado es de tipo Libre (usando smart cast)
 
 **Comparación con Java:**
 ```java
 // Java
 return camillas.stream()
-    .filter(c -> c.getEstado() == EstadoCamilla.LIBRE)
+    .filter(c -> c.getEstado() instanceof Libre)
     .findFirst()
     .orElse(null);
 ```
@@ -1091,15 +1160,12 @@ suspend fun ingresarPokemon(pokemon: PokemonModel) {
         return
     }
 
-    camilla.estado = EstadoCamilla.EN_PROCESO
-    camilla.motivo = "Ingresando Pokémon..."
+    camilla.estado = EstadoCamilla.EnProceso(motivo = "Ingresando Pokémon...")
     println("Camilla ${camilla.numero} - Ingresando ${pokemon.nombrePokemon}...")
 
     delay(3000)  // 3 segundos
 
-    camilla.estado = EstadoCamilla.OCUPADA
-    camilla.pokemon = pokemon
-    camilla.motivo = ""
+    camilla.estado = EstadoCamilla.Ocupada(pokemon = pokemon)
     historial.add(pokemon)
 
     println("${pokemon.nombrePokemon} ingresado en camilla ${camilla.numero}")
@@ -1113,6 +1179,10 @@ suspend fun ingresarPokemon(pokemon: PokemonModel) {
 
 **¿Por qué `suspend`?** Las corrutinas permiten que el programa siga ejecutándose mientras espera. Si usaras `Thread.sleep(3000)`, la aplicación se congelaría durante 3 segundos.
 
+**Cambio con sealed class:**
+- Antes: `camilla.estado = EstadoCamilla.EN_PROCESO` + `camilla.motivo = "..."`
+- Ahora: `camilla.estado = EstadoCamilla.EnProceso(motivo = "...")`
+
 ### Método: Dar de Alta Pokémon
 
 ```kotlin
@@ -1122,16 +1192,20 @@ suspend fun darDeAlta(codigo: String, tiempoMinuto: Int) {
         return
     }
 
-    val camilla = camillas.find { it.pokemon?.idPokedex == codigo }
-    if (camilla == null || camilla.pokemon == null) {
+    // Buscar camilla que tenga el Pokémon con ese código
+    val camilla = camillas.find { estado ->
+        estado.estado is EstadoCamilla.Ocupada &&
+        (estado.estado as EstadoCamilla.Ocupada).pokemon.idPokedex == codigo
+    }
+
+    if (camilla == null || camilla.estado !is EstadoCamilla.Ocupada) {
         println("Error: pokemon no encontrado - $codigo")
         return
     }
 
-    val pokemon = camilla.pokemon!!
+    val pokemon = (camilla.estado as EstadoCamilla.Ocupada).pokemon
 
-    camilla.estado = EstadoCamilla.EN_PROCESO
-    camilla.motivo = "Procesando alta y cobro..."
+    camilla.estado = EstadoCamilla.EnProceso(motivo = "Procesando alta y cobro...")
     println("Camilla ${camilla.numero} - Procesando alta de ${pokemon.nombrePokemon}...")
 
     delay(6500)  // 6.5 segundos
@@ -1147,9 +1221,7 @@ suspend fun darDeAlta(codigo: String, tiempoMinuto: Int) {
         (recaudacionPorCategoria[pokemon.tipoPokemon] ?: 0.0) + total
 
     // Liberar camilla
-    camilla.estado = EstadoCamilla.LIBRE
-    camilla.pokemon = null
-    camilla.motivo = ""
+    camilla.estado = EstadoCamilla.Libre
 
     // Ficha de Alta
     println("""
@@ -1169,6 +1241,10 @@ suspend fun darDeAlta(codigo: String, tiempoMinuto: Int) {
 2. `costoBase * 1.19`: Agrega IVA del 19%
 3. Si es Legendario: `conIVA * 0.50` (50% descuento)
 
+**Cambio con sealed class:**
+- Para buscar el Pokémon: se verifica `is EstadoCamilla.Ocupada` y se extrae el pokemon
+- Para liberar: `camilla.estado = EstadoCamilla.Libre` (sin necesidad de limpiar campos)
+
 **Explicación de `?:` (Elvis Operator):**
 ```kotlin
 recaudacionPorCategoria[pokemon.tipoPokemon] ?: 0.0
@@ -1179,7 +1255,7 @@ recaudacionPorCategoria[pokemon.tipoPokemon] ?: 0.0
 
 ```kotlin
 fun contarCamillasDisponibles(): Int {
-    return camillas.count { it.estado == EstadoCamilla.LIBRE }
+    return camillas.count { it.estado is EstadoCamilla.Libre }
 }
 
 fun filtrarPokemonVIP(): List<PokemonModel> {

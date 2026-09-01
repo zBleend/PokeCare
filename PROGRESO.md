@@ -14,13 +14,17 @@ Actividad de POO para la asignatura de Desarrollo de Aplicaciones Móviles.
 ```
 src/main/kotlin/
 ├── Main.kt                          (vacío - pendiente)
-└── model/
-    ├── PokemonModel.kt              ✅ Clase base abstracta
-    ├── PokemonElectrico.kt          ✅ Subclase - tiene calcularCosto()
-    ├── PokemonAgua.kt               ✅ Subclase - tiene calcularCosto()
-    ├── PokemonDragon.kt             ✅ Subclase - tiene calcularCosto()
-    ├── TipoPokemon.kt               ✅ Enum (ELECTRICO, AGUA, DRAGON)
-    └── TipoEntrenador.kt            ✅ Enum (NOVATO, VIP, LEGENDARIO)
+├── model/
+│   ├── PokemonModel.kt              ✅ Clase base open
+│   ├── PokemonElectrico.kt          ✅ Subclase - tiene calcularCosto()
+│   ├── PokemonAgua.kt               ✅ Subclase - tiene calcularCosto()
+│   ├── PokemonDragon.kt             ✅ Subclase - tiene calcularCosto()
+│   ├── TipoPokemon.kt               ✅ Enum (ELECTRICO, AGUA, DRAGON)
+│   ├── TipoEntrenador.kt            ✅ Enum (NOVATO, VIP, LEGENDARIO)
+│   ├── EstadoCamilla.kt             ✅ Sealed Class (Libre, Ocupada, EnProceso, FueraDeServicio)
+│   └── CamillaModel.kt              ✅ Modelo de camilla con estado sealed
+└── service/
+    └── CentroPokemon.kt             ✅ Gestor principal con corrutinas
 ```
 
 ---
@@ -37,10 +41,10 @@ src/main/kotlin/
   - Decisión: usar contador en el gestor del centro para generar IDs automáticamente
   - No se validará, se generará directamente con formato correcto
 
-### R2 - Estados de camillas ❌ NO INICIADO
-Pendiente crear:
-- Enum para estados: Libre, Ocupada, En Proceso, Fuera de Servicio
-- Clase Camilla con estado y Pokémon asignado
+### R2 - Estados de camillas ✅ COMPLETADO
+- [x] Sealed class EstadoCamilla con 4 estados
+- [x] Clase CamillaModel con estado usando sealed class
+- [x] Cada estado lleva sus propios datos (pokemon en Ocupada, motivo en EnProceso/FueraDeServicio)
 
 ### R3 - Cálculo de tarifas y validación ❌ NO INICIADO
 Pendiente:
@@ -69,10 +73,11 @@ Pendiente:
 - Pokémon no encontrado
 - Centro sin capacidad
 
-### R7 - Organización técnica ✅ PARCIAL
+### R7 - Organización técnica ✅ COMPLETADO
 - [x] Modelos en separate files
 - [x] Enums en separate files
-- [ ] Gestor de camillas
+- [x] Sealed Class para EstadoCamilla
+- [x] CentroPokemon como gestor de camillas
 - [ ] Main.kt con pruebas
 
 ---
@@ -111,16 +116,9 @@ Si Mega-Evolucionado → costo * 1.30 (30% recargo)
 
 ## Próximos Pasos a Realizar
 
-1. **Crear clase CentroPokemon/Gestor** con:
-   - Lista de 10 camillas
-   - Contador de IDs (PK0001, PK0002...)
-   - Método para agregar Pokémon
-   - Método para dar de alta
-   - Control de recaudación
-
-2. **Crear enum EstadoCamilla** (R2)
-3. **Crear clase Camilla** (R2)
-4. **Implementar Main.kt** con datos de prueba del documento
+1. **Implementar Main.kt** con datos de prueba del documento
+2. **Probar el sistema** completo con los 5 Pokémon de prueba
+3. **Verificar cálculos** de costos con los tiempos indicados
 
 ---
 
@@ -151,9 +149,11 @@ Si Mega-Evolucionado → costo * 1.30 (30% recargo)
 
 ## Decisiones Tomadas
 1. **Herencia/Polimorfismo**: Se usan subclases (PokemonElectrico, PokemonAgua, PokemonDragon) en vez de Service
-2. **ID automático**: Se generará con contador, no se validará manualmente
+2. **ID automático**: Se genera con contador en CentroPokemon (PK0001, PK0002...)
 3. **Clase base open**: PokemonModel es open para poder ser heredada
 4. **Método calcularCosto**: Se sobreescribe en cada subclase
+5. **Sealed Class para EstadoCamilla**: Cada estado lleva sus propios datos (pokemon, motivo)
+6. **CamillaModel simplificado**: Solo tiene numero y estado (los datos están en la sealed class)
 
 ## Notas para la IA
 - El usuario prefiere que se le explique la lógica y él escriba el código

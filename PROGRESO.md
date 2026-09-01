@@ -129,13 +129,14 @@ Si Mega-Evolucionado → costo * 1.30 (30% recargo)
 | Dragón | PK3002 | Altaria | Novato | Mega: No |
 
 ### Tiempos de tratamiento para altas:
-| Código | Minutos | Cálculo esperado |
-|--------|---------|------------------|
-| PK1001 | 75 min | Eléctrico VIP con descuento |
-| PK1002 | 180 min | Eléctrico Novato sin descuento |
-| PK2001 | 25 min | Agua < 30 min = $0 |
-| PK3001 | 120 min | Dragón Mega Legendario |
-| PK3002 | 45 min | Dragón normal Novato |
+| Código | Minutos | Cálculo esperado | Monto |
+|--------|---------|------------------|-------|
+| PK1001 | 75 min | Eléctrico VIP con 20% descuento + IVA | $1,785.00 |
+| PK1002 | 180 min | Eléctrico Novato sin descuento + IVA | $5,355.00 |
+| PK2001 | 25 min | Agua < 30 min = $0 | $0.00 |
+| PK3001 | 120 min | Dragón Mega (+30%) + IVA + Legendario (-50%) | $3,867.50 |
+| PK3002 | 45 min | Dragón normal Novato + IVA | $2,231.25 |
+| **Total** | | | **$13,238.75** |
 
 ### Prueba de error:
 - Código "123ABC" → Formato inválido

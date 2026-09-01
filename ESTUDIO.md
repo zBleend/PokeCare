@@ -762,73 +762,182 @@ if (centro.historial.isNotEmpty()) {
 
 ## 10. Coroutines (Corrutinas)
 
-### 10.1 Concepto
+### 10.1 ¿Qué problema resuelven?
 
-Las corrutinas permiten ejecutar código de forma asíncrona sin bloquear el hilo principal.
+Imagina que necesitas esperar 3 segundos antes de continuar (por ejemplo, mientras un Pokémon se ingresa al centro). Sin corrutinas:
 
-### 10.2 Función Suspend
+```kotlin
+fun main() {
+    println("Ingresando Pokémon...")
+    Thread.sleep(3000)  // TODO el programa se CONGELA durante 3 segundos
+    println("Pokémon ingresado")
+    // El usuario no puede hacer nada mientras tanto
+}
+```
+
+Con corrutinas:
+
+```kotlin
+fun main() = runBlocking {
+    println("Ingresando Pokémon...")
+    delay(3000)  // Pausa 3 segundos, pero el hilo LIBRE para otro código
+    println("Pokémon ingresado")
+}
+```
+
+**¿Cómo funciona internamente?** Kotlin "pausa" la función y libera el hilo. Cuando pasan los 3 segundos, Kotlin reanuda la función exactamente donde la dejó. Es como poner una película en pausa y reanudarla después.
+
+### 10.2 Función `suspend`
+
+Una función `suspend` es una función que **puede pausarse**. Solo puede llamar a otras funciones suspend o estar dentro de un scope de corrutinas.
 
 ```kotlin
 import kotlinx.coroutines.delay
 
-suspend fun esperar() {
-    delay(1000)  // Espera 1 segundo SIN bloquear
-    println("Terminó")
+suspend fun ingresarPokemon(nombre: String) {
+    println("Ingresando $nombre...")
+    delay(3000)  // ✅ Puede usar delay porque es suspend
+    println("$nombre ingresado")
+}
+
+// ❌ Esto NO compila:
+fun noFunciona() {
+    delay(1000)  // ERROR: delay solo funciona en suspend
 }
 ```
 
-### 10.3 runBlocking
+**Regla:** Si una función usa `delay`, `launch`, `async` o llama a otra `suspend fun`, DEBE ser `suspend`.
+
+### 10.3 `runBlocking`
+
+`runBlocking` crea un **scope de corrutinas** que bloquea el hilo principal hasta que todas las corrutinas dentro terminen. Solo se usa en:
+- `fun main()`
+- Tests
 
 ```kotlin
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.delay
 
 fun main() = runBlocking {
     println("Inicio")
-    delay(1000)  // Solo funciona dentro de coroutine
+    delay(1000)
     println("Fin")
 }
+// Salida: Inicio → (espera 1 seg) → Fin
 ```
 
-### 10.4 launch (Ejecutar en paralelo)
+**¿Por qué no usarlo siempre?** Porque bloquea el hilo. En una app real (Android), si usas `runBlocking` en el hilo principal, la app se congela. Se usa solo para arrancar el programa.
+
+### 10.4 `launch` (Ejecutar en paralelo)
+
+`launch` lanza una corrutina que ejecuta código **en paralelo** sin esperar que termine:
 
 ```kotlin
 import kotlinx.coroutines.*
 
 fun main() = runBlocking {
-    launch {  // Ejecuta en paralelo
+    launch {  // Tarea 1 - se ejecuta en paralelo
         delay(1000)
         println("Tarea 1")
     }
 
-    launch {
+    launch {  // Tarea 2 - se ejecuta en paralelo
         delay(500)
         println("Tarea 2")
     }
 
     println("Inicio")
 }
-// Salida: Inicio → Tarea 2 → Tarea 1
+// Salida: Inicio → Tarea 2 (500ms) → Tarea 1 (1000ms)
 ```
 
-### 10.5 async (Obtener resultado)
+**Nota:** "Inicio" se imprime primero porque las tareas son asíncronas.
+
+### 10.5 `async` (Obtener resultado)
+
+`async` es como `launch` pero **retorna un resultado**:
 
 ```kotlin
 fun main() = runBlocking {
     val resultado = async {
         delay(1000)
-        42
+        42  // Este es el valor que retorna
     }
-    println("Resultado: ${resultado.await()}")  // Espera y obtiene el valor
+    println("Resultado: ${resultado.await()}")  // await() espera y obtiene el valor
+}
+// Salida: Resultado: 42
+```
+
+### 10.6 Ejemplo del Proyecto: CentroPokemon
+
+En nuestro proyecto, las funciones de ingresso y alta usan `suspend` con `delay`:
+
+```kotlin
+class CentroPokemon {
+    // ...
+
+    suspend fun ingresarPokemon(pokemon: PokemonModel) {
+        val camilla = buscarCamillaLibre()
+        if (camilla == null) {
+            println("Error: centro sin capacidad")
+            return
+        }
+
+        // Estado "En Proceso" durante la espera
+        camilla.estado = EstadoCamilla.EnProceso(motivo = "Ingresando Pokémon...")
+        println("Camilla ${camilla.numero} - Ingresando ${pokemon.nombrePokemon}...")
+
+        delay(3000)  // 3 segundos SIN bloquear el programa
+
+        camilla.estado = EstadoCamilla.Ocupada(pokemon = pokemon)
+        println("${pokemon.nombrePokemon} ingresado en camilla ${camilla.numero}")
+    }
+
+    suspend fun darDeAlta(codigo: String) {
+        // ... validaciones ...
+
+        camilla.estado = EstadoCamilla.EnProceso(motivo = "Procesando alta y cobro...")
+        delay(6500)  // 6.5 segundos
+
+        // ... cálculo de costos ...
+        camilla.estado = EstadoCamilla.Libre
+    }
+}
+
+// Main.kt
+fun main() = runBlocking {
+    val centro = CentroPokemon()
+    centro.ingresarPokemon(pikachu)  // Puede llamar suspend porque está en runBlocking
+    centro.darDeAlta("PK1001")
+    centro.generarReporte()
 }
 ```
 
-### 10.6 Coroutines vs Thread
+### 10.7 Coroutines vs Thread
+
+```kotlin
+// ❌ Thread - bloquea y pesado
+fun main() {
+    println("Inicio")
+    Thread.sleep(3000)  // Bloquea todo el hilo
+    println("Fin")
+}
+
+// ✅ Coroutine - no bloquea y ligero
+fun main() = runBlocking {
+    println("Inicio")
+    delay(3000)  // Pausa sin bloquear
+    println("Fin")
+}
+```
 
 | Thread | Coroutine |
 |--------|-----------|
-| `Thread.sleep(1000)` bloquea | `delay(1000)` no bloquea |
-| Pesado en memoria | Ligero en memoria |
+| `Thread.sleep(1000)` bloquea el hilo | `delay(1000)` pausa sin bloquear |
+| Pesado en memoria (1 thread = 1MB) | Ligero en memoria (1 coroutine = ~nada) |
 | Difícil de controlar | Fácil de cancelar |
+| Pool de threads limitado | Miles de corrutinas posibles |
+| Bloquea el hilo principal de Android | No bloquea la UI de Android |
 
 ---
 
@@ -1013,54 +1122,242 @@ val resultado = pokemon.run {
 
 ## 16. Operator Overloading
 
-Kotlin permite sobrecargar ciertos operadores:
+### 16.1 ¿Qué es?
+
+Kotlin permite que clases propias usen operadores nativos como `+`, `-`, `*`, etc. Esto hace que el código sea más legible y natural.
+
+**¿Por qué existe?** Sin operator overloading, para sumar dos objetos necesitarías escribir algo como `obj1.sumar(obj2)`. Con operator overloading puedes escribir `obj1 + obj2`, que es mucho más claro.
+
+### 16.2 Sintaxis Básica
 
 ```kotlin
-data class Pokemon(val nombre: String, val nivel: Int) {
-    operator fun plus(otro: Pokemon): Pokemon {
-        return Pokemon("Fusion", this.nivel + otro.nivel)
+data class Tiempo(val minutos: Int) {
+    operator fun plus(otro: Tiempo): Tiempo {
+        return Tiempo(this.minutos + otro.minutos)
     }
 }
 
-val p1 = Pokemon("Pikachu", 10)
-val p2 = Pokemon("Raichu", 20)
-val fusion = p1 + p2  // Pokemon("Fusion", 30)
+val t1 = Tiempo(75)
+val t2 = Tiempo(45)
+val total = t1 + t2  // Tiempo(120)
+println(total.minutos)  // 120
 ```
 
-**Operadores sobrecargables:**
-- `+` → `plus`
-- `-` → `minus`
-- `*` → `times`
-- `/` → `div`
-- `%` → `rem`
-- `==` → `equals`
-- `>` → `compareTo`
+### 16.3 Tabla Completa de Operadores
+
+| Operador | Función | Ejemplo | Descripción |
+|----------|---------|---------|-------------|
+| `+` | `plus` | `a + b` | Suma |
+| `-` | `minus` | `a - b` | Resta |
+| `*` | `times` | `a * b` | Multiplicación |
+| `/` | `div` | `a / b` | División |
+| `%` | `rem` | `a % b` | Residuo |
+| `==` | `equals` | `a == b` | Igualdad |
+| `>` | `compareTo` | `a > b` | Comparación |
+| `>=` | `compareTo` | `a >= b` | Mayor o igual |
+| `<` | `compareTo` | `a < b` | Menor |
+| `<=` | `compareTo` | `a <= b` | Menor o igual |
+| `+=` | `plusAssign` | `a += b` | Suma y asigna |
+| `-=` | `minusAssign` | `a -= b` | Resta y asigna |
+| `*=` | `timesAssign` | `a *= b` | Multiplica y asigna |
+| `[]` | `get` / `set` | `a[i]` | Acceso por índice |
+| `()` | `invoke` | `a()` | Invocar como función |
+
+### 16.4 Ejemplo Práctico: CostoAcumulado
+
+```kotlin
+data class CostoAcumulado(var monto: Double) {
+    operator fun plus(otro: CostoAcumulado): CostoAcumulado {
+        return CostoAcumulado(this.monto + otro.monto)
+    }
+
+    operator fun times(porcentaje: Double): CostoAcumulado {
+        return CostoAcumulado(this.monto * porcentaje)
+    }
+
+    override fun toString(): String = "$${"%.2f".format(monto)}"
+}
+
+val costo1 = CostoAcumulado(1500.0)
+val costo2 = CostoAcumulado(2500.0)
+val total = costo1 + costo2          // CostoAcumulado(4000.0)
+val conDescuento = total * 0.80      // CostoAcumulado(3200.0)
+println(total)          // $4000.00
+println(conDescuento)   // $3200.00
+```
+
+### 16.5 Ejemplo con compareTo
+
+```kotlin
+data class Pokemon(val nombre: String, val nivel: Int) : Comparable<Pokemon> {
+    override fun compareTo(otro: Pokemon): Int {
+        return this.nivel - otro.nivel  // Negativo si es menor, positivo si es mayor
+    }
+}
+
+val pikachu = Pokemon("Pikachu", 15)
+val raichu = Pokemon("Raichu", 25)
+
+println(pikachu > raichu)   // false (15 no es mayor que 25)
+println(pikachu < raichu)   // true  (15 es menor que 25)
+println(pikachu >= pikachu) // true  (15 == 15)
+```
+
+### 16.6 Cuándo Usar y Cuándo NO Usar
+
+**Usa operator overloading cuando:**
+- La operación es intuitiva (sumar costos, comparar niveles)
+- Mejora la legibilidad del código
+- La semántica del operador es clara
+
+**NO uses operator overloading cuando:**
+- La operación no es intuitiva (¿qué significaría `pokemon * pokemon`?)
+- Confunde al lector
+- Podría causar bugs difíciles de detectar
+
+### 16.7 Comparación con Java
+
+Java **no permite** operator overloading (excepto para `+` con Strings). En Java necesitas crear métodos explícitos:
+
+```java
+// Java - no se puede sobrecargar operadores
+public class Tiempo {
+    private int minutos;
+
+    public Tiempo sumar(Tiempo otro) {
+        return new Tiempo(this.minutos + otro.minutos);
+    }
+}
+
+// Uso
+Tiempo t1 = new Tiempo(75);
+Tiempo t2 = new Tiempo(45);
+Tiempo total = t1.sumar(t2);  // En vez de t1 + t2
+```
 
 ---
 
 ## 17. Generics
 
-### 17.1 Clases Genéricas
+### 17.1 ¿Qué son y por qué existen?
+
+Los generics permiten escribir una **única función o clase** que funcione con **cualquier tipo** de dato. Sin generics, necesitarías crear una versión separada para cada tipo.
+
+**Problema sin generics:**
+```kotlin
+class ContenedorString(var item: String)
+class ContenedorInt(var item: Int)
+class ContenedorPokemon(var item: Pokemon)
+// ... necesitarías una clase para cada tipo
+```
+
+**Solución con generics:**
+```kotlin
+class Contenedor<T>(var item: T)  // Una sola clase para todos los tipos
+```
+
+### 17.2 Clases Genéricas
 
 ```kotlin
 class Contenedor<T>(var item: T)
 
-val cajaString = Contenedor("Hola")
-val cajaInt = Contenedor(42)
+val cajaString = Contenedor("Hola")      // Contenedor<String>
+val cajaInt = Contenedor(42)             // Contenedor<Int>
+val cajaPokemon = Contenedor(Pokemon("Pikachu", 15))  // Contenedor<Pokemon>
+
+// Acceder al item
+println(cajaString.item)  // "Hola"
+println(cajaInt.item)     // 42
 ```
 
-### 17.2 Funciones Genéricas
+### 17.3 Generics en el Proyecto PokeCare
+
+Las colecciones que usas en el proyecto **ya son genéricas**:
+
+```kotlin
+// MutableList<CamillaModel> - lista que solo acepta CamillaModel
+val camillas = mutableListOf<CamillaModel>()
+
+// MutableList<PokemonModel> - lista que solo acepta PokemonModel
+val historial = mutableListOf<PokemonModel>()
+
+// MutableList<FichaAlta> - lista que solo acepta FichaAlta
+val fichasDeAlta = mutableListOf<FichaAlta>()
+
+// Map<TipoPokemon, Double> - mapa con claves TipoPokemon y valores Double
+val recaudacionPorCategoria = mutableMapOf<TipoPokemon, Double>()
+```
+
+Cuando escribes `mutableListOf<CamillaModel>()`, estás diciendo: "esta lista solo puede guardar objetos de tipo CamillaModel". Si intentas agregar un Pokémon, Kotlin da error en tiempo de compilación.
+
+### 17.4 Funciones Genéricas
 
 ```kotlin
 fun <T> imprimir(item: T) {
     println(item)
 }
 
-// Con restricción (bound)
+imprimir("Hola")    // T = String
+imprimir(42)        // T = Int
+imprimir(Pokemon("Pikachu", 15))  // T = Pokemon
+```
+
+### 17.5 Restricciones de Tipo (Bounded Types)
+
+Puedes limitar qué tipos puede usar T:
+
+```kotlin
+// T debe implementar Comparable (para poder comparar)
 fun <T : Comparable<T>> minimo(a: T, b: T): T {
     return if (a < b) a else b
 }
+
+// Funciona con Int, String, Double (todos implementan Comparable)
+println(minimo(5, 10))       // 5
+println(minimo("abc", "xyz"))  // "abc"
+
+// NO funcionaría con Pokemon (no implementa Comparable)
+// minimo(pokemon1, pokemon2)  // ERROR
 ```
+
+### 17.6 Múltiples Restricciones
+
+```kotlin
+// T debe ser Number Y Comparable
+fun <T> maximo(lista: List<T>): T where T : Number, T : Comparable<T> {
+    return lista.max()
+}
+```
+
+### 17.7 Tipo Reified (para inline functions)
+
+```kotlin
+inline fun <reified T> List<Any>.filtrarTipo(): List<T> {
+    return filterIsInstance<T>()
+}
+
+val mixta: List<Any> = listOf("Hola", 42, Pokemon("Pikachu", 15), "Mundo")
+val soloPokemon = mixta.filtrarTipo<Pokemon>()  // [Pokemon("Pikachu", 15)]
+val soloStrings = mixta.filtrarTipo<String>()    // ["Hola", "Mundo"]
+```
+
+### 17.8 Comparación con Java
+
+```java
+// Java - generics son similares pero menos seguros (type erasure)
+List<CamillaModel> camillas = new ArrayList<>();
+camillas.add(new CamillaModel(1));
+// En tiempo de ejecución, Java "olvida" que es List<CamillaModel>
+
+// Kotlin es más estricto en compilación
+```
+
+| Característica | Java | Kotlin |
+|----------------|------|--------|
+| Sintaxis | `List<String>` | `List<String>` |
+| Type erasure | Sí (olvida tipo en runtime) | Sí, pero más seguro en compilación |
+| Wildcards | `List<?>`, `List<? extends T>` | No necesarios (usa project/use site variance) |
+| Real type | No disponible | `reified` con `inline fun` |
 
 ---
 
@@ -1193,7 +1490,7 @@ long minutos = ChronoUnit.MINUTES.between(fechaInicio, fechaFin);
 
 ---
 
-## 21. Comparación Final Kotlin vs Java
+## 22. Comparación Final Kotlin vs Java
 
 | Concepto | Java | Kotlin |
 |----------|------|--------|
@@ -1215,7 +1512,243 @@ long minutos = ChronoUnit.MINUTES.between(fechaInicio, fechaFin);
 
 ---
 
-## 22. Puntos Clave para el Examen
+## 23. Ejemplos del Proyecto PokeCare
+
+Esta sección conecta los conceptos teóricos con el código real del proyecto.
+
+### 23.1 Enums (Sección 8)
+
+**Concepto:** Valores fijos que representan categorías.
+
+```kotlin
+// model/TipoPokemon.kt
+enum class TipoPokemon {
+    ELECTRICO,
+    AGUA,
+    DRAGON
+}
+
+// model/TipoEntrenador.kt
+enum class TipoEntrenador {
+    NOVATO,
+    VIP,
+    LEGENDARIO
+}
+
+// Uso en CentroPokemon.kt
+val tipo = TipoPokemon.ELECTRICO  // Acceso con punto
+when (pokemon.tipoPokemon) {
+    TipoPokemon.ELECTRICO -> println("Eléctrico")
+    TipoPokemon.AGUA -> println("Agua")
+    TipoPokemon.DRAGON -> println("Dragón")
+}
+```
+
+### 23.2 Sealed Classes (Sección 5.5)
+
+**Concepto:** Jerarquía restringida donde cada variante tiene datos diferentes.
+
+```kotlin
+// model/EstadoCamilla.kt
+sealed class EstadoCamilla {
+    object Libre : EstadoCamilla()                              // Sin datos
+    data class Ocupada(val pokemon: PokemonModel) : EstadoCamilla()  // Tiene pokemon
+    data class EnProceso(val motivo: String) : EstadoCamilla()       // Tiene motivo
+    data class FueraDeServicio(val motivo: String) : EstadoCamilla() // Tiene motivo
+}
+
+// Uso con when (obligatorio cubrir todos los casos)
+when (val estado = camilla.estado) {
+    is EstadoCamilla.Libre -> println("Disponible")
+    is EstadoCamilla.Ocupada -> println("Ocupada por ${estado.pokemon.nombrePokemon}")
+    is EstadoCamilla.EnProceso -> println(estado.motivo)
+    is EstadoCamilla.FueraDeServicio -> println("Fuera: ${estado.motivo}")
+}
+```
+
+### 23.3 Herencia y Polimorfismo (Secciones 6 y 7)
+
+**Concepto:** Clase base con comportamiento común, subclases con comportamiento específico.
+
+```kotlin
+// model/PokemonModel.kt - Clase base (open = puede heredarse)
+open class PokemonModel(
+    val idPokedex: String,
+    val nombrePokemon: String,
+    val tipoPokemon: TipoPokemon,
+    val tipoEntrenador: TipoEntrenador,
+    val fechaIngreso: LocalDateTime
+) {
+    open fun calcularCosto(tiempoMinutos: Int): Double {
+        return 0.0  // Implementación por defecto
+    }
+}
+
+// model/PokemonElectrico.kt - Hereda y sobreescribe
+class PokemonElectrico(
+    idPokedex: String,
+    nombrePokemon: String,
+    tipoEntrenador: TipoEntrenador,
+    fechaIngreso: LocalDateTime
+) : PokemonModel(idPokedex, nombrePokemon, TipoPokemon.ELECTRICO, tipoEntrenador, fechaIngreso) {
+
+    override fun calcularCosto(tiempoMinutos: Int): Double {
+        val horas = tiempoMinutos / 60.0
+        var costo = horas * 1500.0
+        if (tipoEntrenador == TipoEntrenador.VIP) {
+            costo *= 0.80
+        }
+        return costo
+    }
+}
+
+// Polimorfismo: mismo método, diferente comportamiento
+val pikachu: PokemonModel = PokemonElectrico(...)
+val costo = pikachu.calcularCosto(75)  // Usa calcularCosto de PokemonElectrico
+```
+
+### 23.4 Data Classes (Sección 5.4)
+
+**Concepto:** Clases que solo contienen datos. Kotlin genera automáticamente equals, hashCode, toString, copy.
+
+```kotlin
+// model/FichaAlta.kt
+data class FichaAlta(
+    val numeroFicha: Int,
+    val pokemon: PokemonModel,
+    val tiempoMinutos: Int,
+    val montoPagado: Double
+)
+
+// Uso
+val ficha = FichaAlta(1, pikachu, 75, 1785.00)
+println(ficha)  // FichaAlta(numeroFicha=1, pokemon=..., tiempoMinutos=75, montoPagado=1785.0)
+
+// Copia con cambios
+val ficha2 = ficha.copy(montoPagado = 2000.00)
+```
+
+### 23.5 Colecciones y Operaciones Funcionales (Secciones 9 y 11)
+
+```kotlin
+// En CentroPokemon.kt
+val camillas = mutableListOf<CamillaModel>()  // Lista mutable
+val historial = mutableListOf<PokemonModel>()
+val recaudacionPorCategoria = mutableMapOf<TipoPokemon, Double>()
+
+// filter - filtrar elementos
+val vip = historial.filter { it.tipoEntrenador == TipoEntrenador.VIP }
+
+// count - contar elementos
+val disponibles = camillas.count { it.estado is EstadoCamilla.Libre }
+
+// map - transformar elementos
+val codigos = historial.map { it.idPokedex }
+
+// find - encontrar primer elemento
+val dragonite = historial.find { it.nombrePokemon == "Dragonite" }
+
+// maxByOrNull - encontrar el mayor
+val masTiempo = historial.maxByOrNull { it.fechaIngreso }
+
+// forEach - ejecutar acción para cada elemento
+fichasDeAlta.forEach { ficha ->
+    println("#${ficha.numeroFicha}: ${ficha.pokemon.nombrePokemon}")
+}
+
+// joinToString - convertir lista a string
+println(codigos.joinToString(", "))  // "PK1001, PK1002, PK2001"
+```
+
+### 23.6 Null Safety (Sección 3)
+
+```kotlin
+// En CentroPokemon.kt
+
+// ?. (Safe Call) - hacer algo solo si no es null
+val pokemon = camilla.estado as? EstadoCamilla.Ocupada
+println(pokemon?.pokemon?.nombrePokemon)  // null si no está ocupada
+
+// ?: (Elvis) - usar valor por defecto si es null
+val costo = recaudacionPorCategoria[tipo] ?: 0.0  // 0.0 si no existe
+
+// firstOrNull - obtener elemento o null
+val libre = camillas.firstOrNull { it.estado is EstadoCamilla.Libre }
+if (libre != null) {
+    // Smart cast: libre ya no es null aquí
+    println("Camilla ${libre.numero} disponible")
+}
+```
+
+### 23.7 Funciones suspend y runBlocking (Sección 10)
+
+```kotlin
+// service/CentroPokemon.kt
+suspend fun ingresarPokemon(pokemon: PokemonModel) {
+    camilla.estado = EstadoCamilla.EnProceso(motivo = "Ingresando...")
+    delay(3000)  // Pausa 3 segundos sin bloquear
+    camilla.estado = EstadoCamilla.Ocupada(pokemon)
+}
+
+suspend fun darDeAlta(codigo: String) {
+    camilla.estado = EstadoCamilla.EnProceso(motivo = "Procesando alta...")
+    delay(6500)  // Pausa 6.5 segundos
+    // ... cálculo de costos ...
+    camilla.estado = EstadoCamilla.Libre
+}
+
+// Main.kt
+fun main() = runBlocking {
+    val centro = CentroPokemon()
+
+    // Crear un Pokémon primero
+    val pikachu = PokemonElectrico(
+        idPokedex = "PK1001",
+        nombrePokemon = "Pikachu",
+        tipoEntrenador = TipoEntrenador.VIP,
+        fechaIngreso = LocalDateTime.now()
+    )
+
+    centro.ingresarPokemon(pikachu)  // Puede llamar suspend
+    centro.darDeAlta("PK1001")
+}
+```
+
+### 23.8 Funciones de Extensión (Sección 14)
+
+```kotlin
+// Agregar método a una clase existente
+fun CentroPokemon.resumen(): String {
+    return "${this.nombre}: ${this.historial.size} atendidos, $" + "%.2f".format(this.recaudacionTotal)
+}
+
+// Uso
+println(centro.resumen())  // "PokeCare Kanto Centro: 5 atendidos, $13238.75"
+```
+
+### 23.9 Scope Functions (Sección 15)
+
+```kotlin
+// apply - configurar objeto después de crearlo
+val pikachu = PokemonElectrico(
+    idPokedex = "PK1001",
+    nombrePokemon = "Pikachu",
+    tipoEntrenador = TipoEntrenador.VIP,
+    fechaIngreso = LocalDateTime.now()
+).apply {
+    println("Pokémon $nombrePokemon creado con código $idPokedex")
+}
+
+// let - ejecutar código solo si no es null
+val camillaLibre = centro.buscarCamillaLibre()
+camillaLibre?.let {
+    println("Camilla ${it.numero} encontrada")
+}
+```
+
+---
+
+## 24. Puntos Clave para el Examen
 
 1. **`val` vs `var`**: `val` es inmutable (final), `var` es mutable
 2. **Null Safety**: `?`, `?.`, `?:`, `!!` son operadores clave
@@ -1229,4 +1762,4 @@ long minutos = ChronoUnit.MINUTES.between(fechaInicio, fechaFin);
 10. **Collections**: `filter`, `map`, `find`, `any`, `all`, `count`, `forEach`, `joinToString`
 11. **LocalDateTime**: `LocalDateTime.now()` para obtener fecha/hora actual
 12. **ChronoUnit**: `ChronoUnit.MINUTES.between(inicio, fin)` para calcular diferencias
-10. **Extension Functions**: Agregar métodos a clases existentes
+13. **Extension Functions**: Agregar métodos a clases existentes

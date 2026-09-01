@@ -63,7 +63,7 @@ class CentroPokemon {
         camilla.estado = EstadoCamilla.Ocupada(pokemon = pokemon)
         historial.add(pokemon)
 
-        println("${pokemon.nombrePokemon} ingresando en camilla ${camilla.numero}")
+        println("${pokemon.nombrePokemon} ingresado en camilla ${camilla.numero}")
     }
 
     suspend fun darDeAlta(codigo: String){

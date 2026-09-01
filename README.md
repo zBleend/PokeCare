@@ -38,7 +38,7 @@ PokeCare/
 │       └── kotlin/
 │           ├── Main.kt                 # Archivo principal (ejecución)
 │           ├── model/                  # Modelos de datos
-│           │   ├── PokemonModel.kt     # Clase base abstracta
+│   │   ├── PokemonModel.kt     # Clase base open
 │           │   ├── PokemonElectrico.kt # Subclase Eléctrico
 │           │   ├── PokemonAgua.kt      # Subclase Agua
 │           │   ├── PokemonDragon.kt    # Subclase Dragón
@@ -770,6 +770,56 @@ println("El Pokémon es $nombre y tiene ${nivel * 2} puntos de ataque")
 // Java
 System.out.println("El Pokémon es " + nombre + " y tiene nivel " + nivel);
 ```
+
+### Clases: open vs abstract
+
+En Kotlin, las clases son **final** por defecto (no se pueden heredar). Para permitir herencia debes usar `open`:
+
+```kotlin
+// Kotlin - open class (puede ser heredada)
+open class Pokemon(val nombre: String) {
+    open fun calcularCosto(): Double = 0.0  // open = puede sobreescribirse
+}
+
+class Pikachu(nombre: String) : Pokemon(nombre) {
+    override fun calcularCosto(): Double = 1500.0  // Sobreescribe el método
+}
+```
+
+**¿Y las abstract?**
+
+```kotlin
+// abstract class = open + puede tener métodos sin implementar
+abstract class Pokemon(val nombre: String) {
+    abstract fun calcularCosto(): Double  // Sin implementación (obligatorio sobreescribir)
+}
+
+class Pikachu(nombre: String) : Pokemon(nombre) {
+    override fun calcularCosto(): Double = 1500.0  // Obligatorio implementar
+}
+```
+
+**Comparación con Java:**
+```java
+// Java - TODAS las clases pueden heredarse por defecto
+public class Pokemon {                    // Equivale a open class
+    public double calcularCosto() { }     // Equivale a open fun
+}
+
+public abstract class Pokemon {           // Equivale a abstract class
+    public abstract double calcularCosto(); // Equivale a abstract fun
+}
+```
+
+| Kotlin | Java | Diferencia |
+|--------|------|------------|
+| `open class` | `class` (normal) | Java permite herencia por defecto |
+| `abstract class` | `abstract class` | Equivalente en ambos |
+| `open fun` | `fun` (normal) | Java permite sobreescribir por defecto |
+| `abstract fun` | `abstract fun` | Equivalente en ambos |
+| `class` (sin open) | `final class` | En Kotlin es final por defecto |
+
+**¿Por qué `open` en vez de permitir herencia directamente?** Porque en Java,-Allowing herencia por defecto puede causar bugs si alguien sobreescribe un método sin querer. Kotlin es más seguro: solo permite herencia cuando el autor de la clase lo declara explícitamente con `open`.
 
 ---
 
@@ -1551,7 +1601,7 @@ gradlew.bat run
 | Dragón | PK3001 | Dragonite | Legendario | Mega: Sí |
 | Dragón | PK3002 | Altaria | Novato | Mega: No |
 
-### Tiempos de Tratamiento
+### Tiempos de Tratamiento y Cálculos Detallados
 
 | Código | Minutos | Resultado Esperado |
 |--------|---------|-------------------|
@@ -1561,6 +1611,61 @@ gradlew.bat run
 | PK3001 | 120 | $3,867.50 |
 | PK3002 | 45 | $2,231.25 |
 | **Total** | | **$13,238.75** |
+
+#### Desglose de cada cálculo
+
+**PK1001 — Pikachu (Eléctrico, VIP, 75 min)**
+```
+1. Horas = 75 / 60 = 1.25 horas
+2. Costo base = 1.25 × $1,500 = $1,875.00
+3. Descuento VIP (20%) = $1,875.00 × 0.80 = $1,500.00
+4. IVA (19%) = $1,500.00 × 1.19 = $1,785.00
+5. Entrenador NO es Legendario → no hay descuento adicional
+Total = $1,785.00
+```
+
+**PK1002 — Raichu (Eléctrico, Novato, 180 min)**
+```
+1. Horas = 180 / 60 = 3.0 horas
+2. Costo base = 3.0 × $1,500 = $4,500.00
+3. Novato → sin descuento VIP
+4. IVA (19%) = $4,500.00 × 1.19 = $5,355.00
+5. Entrenador NO es Legendario → no hay descuento adicional
+Total = $5,355.00
+```
+
+**PK2001 — Squirtle (Agua, Novato, 25 min)**
+```
+1. Tiempo = 25 minutos
+2. Regla especial: si tiempo < 30 min → costo = $0
+3. No se aplica IVA ni otros cálculos
+Total = $0.00
+```
+
+**PK3001 — Dragonite (Dragón, Legendario, Mega, 120 min)**
+```
+1. Horas = 120 / 60 = 2.0 horas
+2. Costo base = 2.0 × $2,500 = $5,000.00
+3. Recargo Mega (30%) = $5,000.00 × 1.30 = $6,500.00
+4. IVA (19%) = $6,500.00 × 1.19 = $7,735.00
+5. Descuento Legendario (50%) = $7,735.00 × 0.50 = $3,867.50
+Total = $3,867.50
+```
+
+**PK3002 — Altaria (Dragón, Novato, No Mega, 45 min)**
+```
+1. Horas = 45 / 60 = 0.75 horas
+2. Costo base = 0.75 × $2,500 = $1,875.00
+3. No es Mega → sin recargo
+4. IVA (19%) = $1,875.00 × 1.19 = $2,231.25
+5. Entrenador NO es Legendario → no hay descuento adicional
+Total = $2,231.25
+```
+
+**Suma total:**
+```
+$1,785.00 + $5,355.00 + $0.00 + $3,867.50 + $2,231.25 = $13,238.75
+```
 
 ### Prueba de Error
 

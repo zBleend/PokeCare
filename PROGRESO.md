@@ -99,7 +99,7 @@ costo = horas * 2500
 Si Mega-Evolucionado → costo * 1.30 (30% recargo)
 ```
 
-### Cálculo total (pendiente implementar en Main o CentroPokemon)
+### Cálculo total (implementado en CentroPokemon.kt)
 ```
 1. costoBase = pokemon.calcularCosto(tiempo)
 2. conIVA = costoBase * 1.19
@@ -111,9 +111,9 @@ Si Mega-Evolucionado → costo * 1.30 (30% recargo)
 
 ## Próximos Pasos a Realizar
 
-1. **Probar el sistema** ejecutando Main.kt
-2. **Verificar cálculos** de costos con los tiempos indicados
-3. **Hacer commit** de los cambios
+1. ~~Probar el sistema ejecutando Main.kt~~ ✅
+2. ~~Verificar cálculos de costos con los tiempos indicados~~ ✅
+3. ~~Hacer commit de los cambios~~ ✅
 
 ---
 

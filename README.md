@@ -624,7 +624,7 @@ Esta información se usa en el reporte de cierre de turno.
 1. En IntelliJ, ir a **Build → Build Project** (o presionar Ctrl+F9)
 2. Esperar a que termine
 3. Si todo está bien, verás "Build completed successfully" abajo
-4. Si hay errores,他们会 aparecer en rojo en la parte inferior
+4. Si hay errores, aparecerán en rojo en la parte inferior
 
 #### 6.2 - Errores comunes
 
@@ -701,7 +701,8 @@ PokeCare/
 │           │   ├── PokemonElectrico.kt
 │           │   ├── PokemonAgua.kt
 │           │   ├── PokemonDragon.kt
-│           │   └── CamillaModel.kt
+│           │   ├── CamillaModel.kt
+│           │   └── FichaAlta.kt
 │           └── service/
 │               └── CentroPokemon.kt
 ```
@@ -776,7 +777,7 @@ System.out.println("El Pokémon es " + nombre + " y tiene nivel " + nivel);
 
 ### ¿Qué es un Enum?
 
-Un enum (enumeración) es un tipo de datos que representa un conjunto fijo de valores常antes. Es como una lista de opciones que no cambia.
+Un enum (enumeración) es un tipo de datos que representa un conjunto fijo de valores constantes. Es como una lista de opciones que no cambia.
 
 ### Enum: TipoPokemon
 
@@ -1443,7 +1444,7 @@ fun main() = runBlocking {
     centro.ingresarPokemon(pikachu)
 
     // Dar de alta
-    centro.darDeAlta("PK1001", 75)
+    centro.darDeAlta("PK1001")
 
     // Reporte
     centro.generarReporte()

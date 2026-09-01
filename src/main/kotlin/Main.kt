@@ -9,7 +9,6 @@ fun main() = runBlocking {
 
     val centro = CentroPokemon()
 
-    // === CREAR POKÉMON ===
     val pikachu = PokemonElectrico(
         idPokedex = "PK1001",
         nombrePokemon = "Pikachu",
@@ -47,7 +46,6 @@ fun main() = runBlocking {
         megaEvolucionado = false
     )
 
-    // === INGRESAR POKÉMON ===
     println("=== INGRESANDO POKÉMON ===")
     centro.ingresarPokemon(pikachu)
     centro.ingresarPokemon(raichu)
@@ -55,7 +53,6 @@ fun main() = runBlocking {
     centro.ingresarPokemon(dragonite)
     centro.ingresarPokemon(altaria)
 
-    // === PRUEBA DE ERROR: CÓDIGO INVÁLIDO ===
     println("\n=== PRUEBA DE ERROR ===")
     val pokemonInvalido = PokemonElectrico(
         idPokedex = "123ABC",
@@ -65,15 +62,13 @@ fun main() = runBlocking {
     )
     centro.ingresarPokemon(pokemonInvalido)
 
-    // === DAR DE ALTA CON TIEMPOS ===
     println("\n=== PROCESANDO ALTAS ===")
-    centro.darDeAlta("PK1001", 75)
-    centro.darDeAlta("PK1002", 180)
-    centro.darDeAlta("PK2001", 25)
-    centro.darDeAlta("PK3001", 120)
-    centro.darDeAlta("PK3002", 45)
+    centro.darDeAlta("PK1001")
+    centro.darDeAlta("PK1002")
+    centro.darDeAlta("PK2001")
+    centro.darDeAlta("PK3001")
+    centro.darDeAlta("PK3002")
 
-    // === REPORTE DE CIERRE ===
     println("\n")
     centro.generarReporte()
 }

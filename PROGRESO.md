@@ -13,7 +13,7 @@ Actividad de POO para la asignatura de Desarrollo de Aplicaciones Móviles.
 
 ```
 src/main/kotlin/
-├── Main.kt                          (vacío - pendiente)
+├── Main.kt                          ✅ Con datos de prueba
 ├── model/
 │   ├── PokemonModel.kt              ✅ Clase base open
 │   ├── PokemonElectrico.kt          ✅ Subclase - tiene calcularCosto()
@@ -22,7 +22,8 @@ src/main/kotlin/
 │   ├── TipoPokemon.kt               ✅ Enum (ELECTRICO, AGUA, DRAGON)
 │   ├── TipoEntrenador.kt            ✅ Enum (NOVATO, VIP, LEGENDARIO)
 │   ├── EstadoCamilla.kt             ✅ Sealed Class (Libre, Ocupada, EnProceso, FueraDeServicio)
-│   └── CamillaModel.kt              ✅ Modelo de camilla con estado sealed
+│   ├── CamillaModel.kt              ✅ Modelo de camilla con estado sealed
+│   └── FichaAlta.kt                 ✅ Data class para fichas de alta
 └── service/
     └── CentroPokemon.kt             ✅ Gestor principal con corrutinas
 ```
@@ -31,54 +32,48 @@ src/main/kotlin/
 
 ## Estado de Requisitos
 
-### R1 - Categorías de Pokémon y reglas de cobro ✅ PARCIAL
+### R1 - Categorías de Pokémon y reglas de cobro ✅ COMPLETADO
 - [x] Crear enum TipoPokemon con 3 categorías
 - [x] Crear enum TipoEntrenador con 3 tipos
 - [x] Crear clase base PokemonModel con datos comunes
 - [x] Crear subclases por tipo (Electrico, Agua, Dragon)
 - [x] Implementar lógica de cobro por categoría en cada subclase
-- [ ] Generar ID automático "PK" + 4 dígitos (PK0001, PK0002...)
-  - Decisión: usar contador en el gestor del centro para generar IDs automáticamente
-  - No se validará, se generará directamente con formato correcto
+- [x] Generar ID automático "PK" + 4 dígitos (método generarId() disponible)
 
 ### R2 - Estados de camillas ✅ COMPLETADO
 - [x] Sealed class EstadoCamilla con 4 estados
 - [x] Clase CamillaModel con estado usando sealed class
 - [x] Cada estado lleva sus propios datos (pokemon en Ocupada, motivo en EnProceso/FueraDeServicio)
 
-### R3 - Cálculo de tarifas y validación ❌ NO INICIADO
-Pendiente:
-- Aplicar IVA 19% después de calcularCosto()
-- Aplicar 50% descuento si entrenador es Legendario
-- Validaciones de datos
+### R3 - Cálculo de tarifas y validación ✅ COMPLETADO
+- [x] Aplicar IVA 19% después de calcularCosto()
+- [x] Aplicar 50% descuento si entrenador es Legendario
+- [x] Validaciones de datos (código, Pokémon no encontrado, centro sin capacidad)
+- [x] Cálculo automático de tiempo con ChronoUnit.MINUTES.between()
 
-### R4 - Gestión del catálogo y consultas ❌ NO INICIADO
-Pendiente:
-- Contar camillas disponibles
-- Filtrar Pokémon VIP
-- Calcular costo promedio
-- Listar códigos Pokédex de dados de alta
-- Encontrar Pokémon con más tiempo en tratamiento
-- Reporte de cierre de turno
+### R4 - Gestión del catálogo y consultas ✅ COMPLETADO
+- [x] Contar camillas disponibles
+- [x] Filtrar Pokémon VIP
+- [x] Calcular costo promedio
+- [x] Listar códigos Pokédex de dados de alta
+- [x] Encontrar Pokémon con más tiempo en tratamiento
+- [x] Reporte de cierre de turno con detalle por Pokémon
 
-### R5 - Registro asíncrono (Corrutinas) ❌ NO INICIADO
-Pendiente:
-- Usar corrutinas para ingreso (3 seg delay) y alta (6.5 seg delay)
-- Estados "En Proceso" durante operaciones
+### R5 - Registro asíncrono (Corrutinas) ✅ COMPLETADO
+- [x] Usar corrutinas para ingreso (3 seg delay) y alta (6.5 seg delay)
+- [x] Estados "En Proceso" durante operaciones
 
-### R6 - Comportamiento ante errores ❌ NO INACHIADO
-Pendiente:
-- Código Pokédex inválido
-- Resultado de tarifa inválido
-- Pokémon no encontrado
-- Centro sin capacidad
+### R6 - Comportamiento ante errores ✅ COMPLETADO
+- [x] Código Pokédex inválido
+- [x] Pokémon no encontrado
+- [x] Centro sin capacidad
 
 ### R7 - Organización técnica ✅ COMPLETADO
 - [x] Modelos en separate files
 - [x] Enums en separate files
 - [x] Sealed Class para EstadoCamilla
 - [x] CentroPokemon como gestor de camillas
-- [ ] Main.kt con pruebas
+- [x] Main.kt con pruebas
 
 ---
 
@@ -116,9 +111,9 @@ Si Mega-Evolucionado → costo * 1.30 (30% recargo)
 
 ## Próximos Pasos a Realizar
 
-1. **Implementar Main.kt** con datos de prueba del documento
-2. **Probar el sistema** completo con los 5 Pokémon de prueba
-3. **Verificar cálculos** de costos con los tiempos indicados
+1. **Probar el sistema** ejecutando Main.kt
+2. **Verificar cálculos** de costos con los tiempos indicados
+3. **Hacer commit** de los cambios
 
 ---
 

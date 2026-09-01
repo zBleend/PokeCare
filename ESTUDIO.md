@@ -565,12 +565,47 @@ lista.addAll(listOf("B", "C"))
 ### 9.3 Map (Diccionario)
 
 ```kotlin
-val mapa = mapOf("nombre" to "Pikachu", "nivel" to 15)
+// Map inmutable
+val mapa = mapOf("nombre" to "Pikacidad", "nivel" to 15)
 println(mapa["nombre"])  // Pikachu
+println(mapa["ataque"])  // null (no existe)
 
-// Mutable
+// Mutable Map (se puede agregar/quitar elementos)
 val mapaMutable = mutableMapOf<String, Int>()
 mapaMutable["ataque"] = 50
+mapaMutable["defensa"] = 30
+mapaMutable["velocidad"] = 80
+
+// Acceder a valores
+println(mapaMutable["ataque"])  // 50
+
+// Actualizar valor
+mapaMutable["ataque"] = 60
+
+// Eliminar elemento
+mapaMutable.remove("defensa")
+
+// Verificar si existe una clave
+println(mapaMutable.containsKey("ataque"))   // true
+println(mapaMutable.containsValue(80))       // true
+
+// Obtener valor con fallback (si no existe, usa el valor por defecto)
+val valor = mapaMutable.getOrDefault("magia", 0)  // 0
+
+// Iterar sobre un map
+for ((clave, valor) in mapaMutable) {
+    println("$clave: $valor")
+}
+```
+
+**Comparación con Java:**
+```java
+// Java
+Map<String, Integer> mapa = new HashMap<>();
+mapa.put("ataque", 50);
+mapa.get("ataque");           // 50
+mapa.containsKey("ataque");  // true
+mapa.remove("ataque");
 ```
 
 ### 9.4 Set (Sin duplicados)
@@ -604,8 +639,31 @@ numeros.count { it > 2 }  // 3
 // reduce / fold
 val suma = numeros.reduce { acc, i -> acc + i }  // 15
 
-// forEach
+// forEach - ejecutar una acción para cada elemento
 numeros.forEach { println(it) }
+
+// forEach con índice
+numeros.forEachIndexed { indice, valor ->
+    println("$indice: $valor")
+}
+
+// forEach en un map
+val pokemon = mapOf("Pikachu" to 15, "Charmander" to 10)
+pokemon.forEach { (nombre, nivel) ->
+    println("$nombre tiene nivel $nivel")
+}
+
+// forEach en una lista de objetos
+data class Entrenador(val nombre: String, val cantidadPokemon: Int)
+val entrenadores = listOf(
+    Entrenador("Ash", 6),
+    Entrenador("Misty", 3),
+    Entrenador("Brock", 2)
+)
+
+entrenadores.forEach { entrenador ->
+    println("${entrenador.nombre} tiene ${entrenador.cantidadPokemon} Pokémon")
+}
 
 // sorted
 numeros.sorted()           // [1, 2, 3, 4, 5]
@@ -614,6 +672,90 @@ numeros.sortedDescending() // [5, 4, 3, 2, 1]
 // groupBy
 val personas = listOf("Ana", "Juan", "Ana", "Pedro")
 personas.groupBy { it.first() }  // {A=[Ana, Ana], J=[Juan], P=[Pedro]}
+
+// joinToString - convertir lista a string
+val codigos = listOf("PK0001", "PK0002", "PK0003")
+println(codigos.joinToString(", "))  // "PK0001, PK0002, PK0003"
+println(codigos.joinToString(" | "))  // "PK0001 | PK0002 | PK0003"
+```
+
+### 9.6 Validaciones con If y Colecciones
+
+Kotlin ofrece métodos útiles para validar datos antes de usarlos:
+
+```kotlin
+// isEmpty() / isNotEmpty() - verificar si una colección está vacía
+val lista = listOf<String>()
+
+if (lista.isEmpty()) {
+    println("La lista está vacía")
+}
+
+if (lista.isNotEmpty()) {
+    println("La lista tiene elementos")
+}
+
+// isNullOrEmpty() - para strings y colecciones nullable
+val nombre: String? = null
+if (nombre.isNullOrEmpty()) {
+    println("El nombre es null o está vacío")
+}
+
+// isNullOrBlank() - como isNullOrEmpty pero también verifica espacios en blanco
+val texto = "   "
+if (texto.isNullOrBlank()) {
+    println("El texto es null, vacío o solo tiene espacios")
+}
+
+// Verificar tamaño de colección
+val pokemon = listOf("Pikachu", "Charmander", "Squirtle")
+if (pokemon.size >= 3) {
+    println("Hay al menos 3 Pokémon")
+}
+
+// firstOrNull() / lastOrNull() - obtener elemento o null si está vacío
+val primerPokemon = pokemon.firstOrNull()  // "Pikachu"
+val pokemonVacio = emptyList<String>().firstOrNull()  // null
+
+// any() / none() - verificar si algún elemento cumple condición
+val numeros = listOf(1, 2, 3, 4, 5)
+if (numeros.any { it > 3 }) {
+    println("Hay números mayores a 3")
+}
+
+if (numeros.none { it > 10 }) {
+    println("No hay números mayores a 10")
+}
+
+// count() - contar elementos que cumplen condición
+val pares = numeros.count { it % 2 == 0 }  // 2
+
+// find() - encontrar primer elemento que cumple condición
+val primerPar = numeros.find { it % 2 == 0 }  // 2
+```
+
+**Ejemplo práctico en el proyecto:**
+```kotlin
+// En CentroPokemon
+fun contarCamillasDisponibles(): Int {
+    return camillas.count { it.estado is EstadoCamilla.Libre }
+}
+
+fun filtrarPokemonVIP(): List<PokemonModel> {
+    return historial.filter { it.tipoEntrenador == TipoEntrenador.VIP }
+}
+
+// Uso en Main.kt
+val centro = CentroPokemon()
+if (centro.contarCamillasDisponibles() > 0) {
+    println("Hay camillas disponibles")
+} else {
+    println("El centro está lleno")
+}
+
+if (centro.historial.isNotEmpty()) {
+    println("Se atendieron ${centro.historial.size} Pokémon")
+}
 ```
 
 ---
@@ -959,7 +1101,86 @@ import cl.ejercicio.model.Pokemon as Pkm
 
 ---
 
-## 20. Convenciones de Código
+## 20. Fechas y Horas (LocalDateTime y ChronoUnit)
+
+### 20.1 LocalDateTime
+
+Para manejar fechas y horas:
+
+```kotlin
+import java.time.LocalDateTime
+
+// Obtener fecha y hora actual
+val ahora = LocalDateTime.now()
+println(ahora)  // 2024-01-15T14:30:45.123
+
+// Crear fecha específica
+val fechaEspecifica = LocalDateTime.of(2024, 1, 15, 14, 30, 0)
+
+// Acceder a componentes
+println(ahora.year)       // 2024
+println(ahora.monthValue) // 1
+println(ahora.dayOfMonth) // 15
+println(ahora.hour)       // 14
+println(ahora.minute)     // 30
+println(ahora.second)     // 45
+```
+
+### 20.2 ChronoUnit (Calcular Diferencias)
+
+Para calcular la diferencia entre dos fechas:
+
+```kotlin
+import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
+
+val fechaInicio = LocalDateTime.of(2024, 1, 15, 8, 0, 0)
+val fechaFin = LocalDateTime.of(2024, 1, 15, 14, 30, 0)
+
+// Calcular diferencia en diferentes unidades
+val minutos = ChronoUnit.MINUTES.between(fechaInicio, fechaFin)  // 390
+val horas = ChronoUnit.HOURS.between(fechaInicio, fechaFin)      // 6
+val dias = ChronoUnit.DAYS.between(fechaInicio, fechaFin)        // 0
+
+// Ejemplo práctico: calcular tiempo de tratamiento
+val fechaIngreso = LocalDateTime.now()
+// ... después de un tiempo ...
+val tiempoMinutos = ChronoUnit.MINUTES.between(fechaIngreso, LocalDateTime.now()).toInt()
+```
+
+### 20.3 Ejemplo en el Proyecto
+
+```kotlin
+// En CentroPokemon.kt
+suspend fun darDeAlta(codigo: String) {
+    // ...
+    
+    // Calcular tiempo de tratamiento automáticamente
+    val tiempoMinutos = ChronoUnit.MINUTES.between(
+        pokemon.fechaIngreso,  // Cuando ingresó
+        LocalDateTime.now()    // Ahora
+    ).toInt()
+    
+    // Usar el tiempo para calcular el costo
+    val costoBase = pokemon.calcularCosto(tiempoMinutos)
+    // ...
+}
+```
+
+**¿Por qué usar ChronoUnit en vez de pasar el tiempo manualmente?**
+- Calcula el tiempo real de tratamiento
+- No depende de un valor que el usuario pueda ingresar incorrectamente
+- Es más seguro y preciso
+
+**Comparación con Java:**
+```java
+// Java
+long minutos = ChronoUnit.MINUTES.between(fechaInicio, fechaFin);
+```
+
+---
+
+## 21. Convenciones de Código
 
 | Regla | Ejemplo |
 |-------|---------|
@@ -1002,7 +1223,10 @@ import cl.ejercicio.model.Pokemon as Pkm
 4. **Polimorfismo**: Un tipo padre puede referenciar hijos diferentes
 5. **Enum**: Valores fijos con posibilidad de propiedades
 6. **Data Class**: Para DTOs, genera equals/hashCode/toString
-7. **Coroutines**: `suspend fun`, `delay()`, `runBlocking`, `launch`
-8. **Lambda**: `{ parametro -> cuerpo }` o `{ it -> cuerpo }`
-9. **Collections**: `filter`, `map`, `find`, `any`, `all`, `count`
+7. **Sealed Class**: Jerarquía restringida donde cada variante tiene datos diferentes
+8. **Coroutines**: `suspend fun`, `delay()`, `runBlocking`, `launch`
+9. **Lambda**: `{ parametro -> cuerpo }` o `{ it -> cuerpo }`
+10. **Collections**: `filter`, `map`, `find`, `any`, `all`, `count`, `forEach`, `joinToString`
+11. **LocalDateTime**: `LocalDateTime.now()` para obtener fecha/hora actual
+12. **ChronoUnit**: `ChronoUnit.MINUTES.between(inicio, fin)` para calcular diferencias
 10. **Extension Functions**: Agregar métodos a clases existentes

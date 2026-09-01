@@ -45,7 +45,8 @@ PokeCare/
 │           │   ├── TipoPokemon.kt      # Enum de categorías
 │           │   ├── TipoEntrenador.kt   # Enum de entrenadores
 │           │   ├── EstadoCamilla.kt    # Sealed class de estados
-│           │   └── CamillaModel.kt     # Modelo de camilla
+│           │   ├── CamillaModel.kt     # Modelo de camilla
+│           │   └── FichaAlta.kt        # Data class para fichas de alta
 │           └── service/                # Lógica de negocio
 │               └── CentroPokemon.kt    # Gestor principal
 ```
@@ -565,14 +566,51 @@ class CamillaModel(
 
 **Ventaja:** Los datos están donde deben estar. Si la camilla está libre, no tiene pokemon ni motivo. Si está ocupada, tiene pokemon. Si está en proceso, tiene motivo.
 
-#### 5.9 - Crear CentroPokemon.kt
+#### 5.9 - Crear FichaAlta.kt
+
+1. Click derecho en `model` → **New → Kotlin Class/File**
+2. Escribir: `FichaAlta`
+3. Seleccionar **Class**
+4. Reemplazar contenido:
+
+```kotlin
+package cl.ejercicio.model
+
+data class FichaAlta(
+    val numeroFicha: Int,
+    val pokemon: PokemonModel,
+    val tiempoMinutos: Int,
+    val montoPagado: Double
+)
+```
+
+**¿Qué es una Data Class?**
+
+Una data class es una clase que solo contiene datos. Kotlin genera automáticamente:
+- `equals()` - Comparar objetos
+- `hashCode()` - Para usar en colecciones
+- `toString()` - Representación en string
+- `copy()` - Copiar objeto
+- `componentN()` - Destructuring
+
+**¿Para qué sirve FichaAlta?**
+
+Cuando un Pokémon se da de alta, necesitamos guardar:
+- Número de ficha secuencial
+- El Pokémon que fue atendido
+- Cuánto tiempo estuvo en tratamiento
+- Cuánto pagó el entrenador
+
+Esta información se usa en el reporte de cierre de turno.
+
+#### 5.10 - Crear CentroPokemon.kt
 
 1. Click derecho en `service` → **New → Kotlin Class/File**
 2. Escribir: `CentroPokemon`
 3. Seleccionar **Class**
 4. Reemplazar contenido con TODO el código de la sección "Creando el Servicio" más abajo en este README
 
-#### 5.10 - Editar Main.kt
+#### 5.11 - Editar Main.kt
 
 1. Hacer doble click en `Main.kt` que ya existe
 2. Reemplazar TODO el contenido con el código de la sección "Creando Main.kt" más abajo
@@ -1064,17 +1102,22 @@ package cl.ejercicio.service
 
 import cl.ejercicio.model.CamillaModel
 import cl.ejercicio.model.EstadoCamilla
+import cl.ejercicio.model.FichaAlta
 import cl.ejercicio.model.PokemonModel
 import cl.ejercicio.model.TipoEntrenador
 import cl.ejercicio.model.TipoPokemon
 import kotlinx.coroutines.delay
+import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
 
 class CentroPokemon {
     val nombre = "PokeCare Kanto Centro"
     val capacidad = 10
     val camillas = mutableListOf<CamillaModel>()
     var contadorIds = 0
+    var contadorFichas = 0
     val historial = mutableListOf<PokemonModel>()
+    val fichasDeAlta = mutableListOf<FichaAlta>()
     var recaudacionTotal = 0.0
     val recaudacionPorCategoria = mutableMapOf<TipoPokemon, Double>()
 
@@ -1089,8 +1132,10 @@ class CentroPokemon {
 
 **Explicación de propiedades:**
 - `mutableListOf<CamillaModel>()`: Lista mutable (puede agregar/quitar elementos)
+- `mutableListOf<FichaAlta>()`: Lista para guardar las fichas de alta de cada Pokémon
 - `mutableMapOf<TipoPokemon, Double>()`: Mapa/diccionario clave-valor
 - `init { }`: Bloque de inicialización (se ejecuta al crear la instancia)
+- `contadorFichas`: Contador para numerar las fichas de alta secuencialmente
 
 ### Método: Generar ID Automático
 
@@ -1186,7 +1231,7 @@ suspend fun ingresarPokemon(pokemon: PokemonModel) {
 ### Método: Dar de Alta Pokémon
 
 ```kotlin
-suspend fun darDeAlta(codigo: String, tiempoMinuto: Int) {
+suspend fun darDeAlta(codigo: String) {
     if (!validarCodigo(codigo)) {
         println("Error: codigo invalido - $codigo")
         return
@@ -1210,8 +1255,11 @@ suspend fun darDeAlta(codigo: String, tiempoMinuto: Int) {
 
     delay(6500)  // 6.5 segundos
 
+    // Calcular tiempo de tratamiento automáticamente
+    val tiempoMinutos = ChronoUnit.MINUTES.between(pokemon.fechaIngreso, LocalDateTime.now()).toInt()
+
     // Cálculo del costo
-    val costoBase = pokemon.calcularCosto(tiempoMinuto)
+    val costoBase = pokemon.calcularCosto(tiempoMinutos)
     val conIVA = costoBase * 1.19
     val total = if (pokemon.tipoEntrenador == TipoEntrenador.LEGENDARIO) conIVA * 0.50 else conIVA
 
@@ -1220,16 +1268,26 @@ suspend fun darDeAlta(codigo: String, tiempoMinuto: Int) {
     recaudacionPorCategoria[pokemon.tipoPokemon] =
         (recaudacionPorCategoria[pokemon.tipoPokemon] ?: 0.0) + total
 
+    // Crear ficha de alta
+    contadorFichas++
+    val ficha = FichaAlta(
+        numeroFicha = contadorFichas,
+        pokemon = pokemon,
+        tiempoMinutos = tiempoMinutos,
+        montoPagado = total
+    )
+    fichasDeAlta.add(ficha)
+
     // Liberar camilla
     camilla.estado = EstadoCamilla.Libre
 
-    // Ficha de Alta
+    // Mostrar ficha
     println("""
-        === FICHA DE ALTA ===
+        === FICHA DE ALTA #$contadorFichas ===
         Pokémon: ${pokemon.nombrePokemon}
         Código: ${pokemon.idPokedex}
         Categoría: ${pokemon.tipoPokemon}
-        Tiempo: $tiempoMinuto minutos
+        Tiempo: $tiempoMinutos minutos
         Total: \$${"%.2f".format(total)}
         ====================
     """.trimIndent())
@@ -1237,9 +1295,15 @@ suspend fun darDeAlta(codigo: String, tiempoMinuto: Int) {
 ```
 
 **Explicación del cálculo:**
-1. `pokemon.calcularCosto(tiempoMinuto)`: Calcula el costo base según la categoría
-2. `costoBase * 1.19`: Agrega IVA del 19%
-3. Si es Legendario: `conIVA * 0.50` (50% descuento)
+1. `ChronoUnit.MINUTES.between(pokemon.fechaIngreso, LocalDateTime.now())`: Calcula los minutos entre la fecha de ingreso y ahora
+2. `pokemon.calcularCosto(tiempoMinutos)`: Calcula el costo base según la categoría
+3. `costoBase * 1.19`: Agrega IVA del 19%
+4. Si es Legendario: `conIVA * 0.50` (50% descuento)
+
+**¿Por qué usar ChronoUnit?**
+- Calcula automáticamente el tiempo real de tratamiento
+- No depende de un valor manual que pueda ser incorrecto
+- Usa la fecha de ingreso que se registró al inicio
 
 **Cambio con sealed class:**
 - Para buscar el Pokémon: se verifica `is EstadoCamilla.Ocupada` y se extrae el pokemon
@@ -1270,12 +1334,22 @@ fun calcularCostoPromedio(): Double {
 fun obtenerPokemonMasTiempo(): PokemonModel? {
     return historial.maxByOrNull { it.fechaIngreso }
 }
+
+fun obtenerCodigosDadosDeAlta(): List<String> {
+    return historial.map { it.idPokedex }
+}
+
+fun obtenerCategoriaMasIngresos(): TipoPokemon? {
+    return recaudacionPorCategoria.maxByOrNull { it.value }?.key
+}
 ```
 
 **Métodos de Kotlin Collections:**
 - `count {}`: Cuenta elementos que cumplen condición
 - `filter {}`: Filtra elementos, retorna nueva lista
 - `maxByOrNull {}`: Retorna el mayor según un criterio, o null si está vacío
+- `map {}`: Transforma cada elemento y retorna una nueva lista
+- `joinToString()`: Convierte una lista a string separado por comas
 
 ### Método: Generar Reporte
 
@@ -1289,11 +1363,22 @@ fun generarReporte() {
         Costo promedio: \$${"%.2f".format(calcularCostoPromedio())}
         Camillas disponibles: ${contarCamillasDisponibles()}
         
-        --- Recaudación por categoría ---
+        --- Detalle por Pokémon ---
     """.trimIndent())
 
+    for (ficha in fichasDeAlta) {
+        println("#${ficha.numeroFicha} | ${ficha.pokemon.tipoPokemon} | ${ficha.pokemon.idPokedex} | ${ficha.tiempoMinutos} min | \$${"%.2f".format(ficha.montoPagado)}")
+    }
+
+    println("")
+    println("--- Recaudación por categoría ---")
     for ((tipo, monto) in recaudacionPorCategoria) {
         println("$tipo: \$${"%.2f".format(monto)}")
+    }
+
+    val categoriaMasIngresos = obtenerCategoriaMasIngresos()
+    if (categoriaMasIngresos != null) {
+        println("\nCategoría con más ingresos: $categoriaMasIngresos")
     }
 
     println("")
@@ -1306,6 +1391,16 @@ fun generarReporte() {
             println("${p.nombrePokemon} (${p.idPokedex})")
         }
     }
+
+    println("")
+    println("--- Códigos dados de alta ---")
+    val codigos = obtenerCodigosDadosDeAlta()
+    if (codigos.isEmpty()) {
+        println("Ninguno")
+    } else {
+        println(codigos.joinToString(", "))
+    }
+
     println("=====================================")
 }
 ```
@@ -1314,6 +1409,8 @@ fun generarReporte() {
 - `trimIndent()`: Elimina la sangría común de strings multilínea
 - `"$"%.2f".format(total)"`: Formatea número con 2 decimales
 - `for ((tipo, monto) in recaudacionPorCategoria)`: Itera sobre un mapa
+- `for (ficha in fichasDeAlta)`: Muestra el detalle de cada Pokémon atendido
+- `joinToString(", ")`: Convierte la lista a string separado por comas
 
 ---
 
